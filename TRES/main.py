@@ -1,3 +1,7 @@
+# Trower Random Selector
+# Remake the script using argparse
+# Add some optional arguments for different modes
+# Add graphic interface with python base library
 import sys
 import random
 from time import sleep
