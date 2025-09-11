@@ -46,13 +46,20 @@ def parseAccounts(line):
     accs = []
     while words:
         cha = words.pop(0)
-        accs.insert(int(cha)-1, words.pop(0))
+        accs.insert(int(cha[0])-1, float(words.pop(0)[:-1]))
     return accs
 
-def printAccounts(accounts):
-    for i, acc in enumerate(accounts):
-        print("{0}: {1:.2f}€ ".format(i, acc), end=" ")
+def printAccounts(accs):
+    for i, acc in enumerate(accs):
+        print("{0}: {1:.2f}€".format(i, acc), end=" ")
     print()
+
+def updateAccounts(accs, lines):
+    newline = ""
+    for i, acc in enumerate(accs):
+        newline += "{0}: {1:.2f}€ ".format(i, acc)
+    lines[-1] = newline
+    return lines
 
 def printOptions():
     print("""Selecciona una opción:
@@ -63,9 +70,226 @@ def printOptions():
     5 - Transferir saldo de una cuenta a otra
     6 - Mostrar transacciones de la semana
     7 - Mostrar transacciones de un mes
-    8 - Salir""")
+    8 - Mostrar la suma de todas las cuentas
+    9 - Salir
+    0 - Menú configuración""")
 
-def userCommandInterface(rfol, currentfile, history):
+def checkWeeksInFile(file, lines, week):
+    i = 0
+    weekcount = 1
+    maxi = len(lines)
+    while weekcount <= week:
+        if "Semana {weekcount}" not in lines: #Semanas sin movimientos
+            lines.insert((weekcount - 1)*3 + 1, "Semana {weekcount}")
+            lines.insert((weekcount - 1)*3 + 2, ".")
+            lines.insert((weekcount)*3, lines[0])
+        weekcount += 1
+    with open(file, 'w') as f:
+        f.writelines(lines)
+
+def addToAccount(accs, lines, week):
+    try:
+        accind = int(input("¿A qué cuenta quieres añadir saldo? (Indica con un número) "))
+        while accind > len(accs):
+            accind = int(input("Cuenta no válida. Sólo hay {len(accs)} cuentas. ¿A qué cuenta quieres añadir saldo? "))
+        money = round(float(input("¿Cuánto saldo quieres añadir? (Indica el número de euros sin ningún carácter especial, usando un punto para céntimos como decimales) ")), 2)
+    except Exception as e:
+        print("No es un número. Abortando operación...")
+        return None
+    subj = input("Introduce el asunto del movimiento: ")
+    weekind = lines.index("Semana {week}")
+    dotind = lines[weekind:].index(".")
+    lines.insert(dotind, "{0} {1:+.2f} {2}".format(accind, money, subj))
+    accs[accind-1] += money
+    lines = updateAccounts(accs, lines)
+    return lines
+
+def addToAccounts(accs, lines, week):
+    try:
+        accind = input("¿A qué cuentas quieres añadir saldo? (Indica con números separados por un espacio) ").strip().split(" ")
+        accind = [int(i) for i in accind]
+        accsnum = len(accs)
+        while len(accind) > accsnum or any(i > accsnum for i in accind):
+            accind = input("Demasiadas cuentas indicadas o cuenta no válida indicada. Sólo hay {len(accs)} cuentas. ¿A qué cuentas quieres añadir saldo? ").strip().split(" ")
+            accind = [int(i) for i in accind]
+        money = float(input("¿Cuánto saldo quieres añadir? (Indica el número de euros sin ningún carácter especial, usando un punto para céntimos como decimales) "))
+        total = 1
+        while total == 1:
+            percents = []
+            for i in accind[:-1]:
+                per = input("¿Qué porcentaje del ingreso irá a la cuenta número {i}? (Indicar con un número entre 0 y 1, escribe decimales detrás del punto) 0.")
+                per = round(float("."+per), 4)
+                total -= per
+                percents.append(per) # Entrada posiblemente no ordenada por número de cuenta
+            total = round(total, 4)
+            percents.append(total)
+            print(f"Para la cuenta {accind[-1]} irá el {round(total*100, 2)}% ({total} restante).", end=" ")
+            if total < 0:
+                total = 1
+                print()
+            else:
+                res = input("¿Porcentajes aceptables? (s/n) ")
+                if res != 's':
+                    return lines
+                aux = [4.4] * len(percents) # Ordenación de percents
+                for i, per in enumerate(percents):
+                    aux.insert(accind[i]-1, per)
+                    aux.remove(4.4)
+                percents = aux
+    except:
+        print("No es un número. Abortando operación...")
+        return None
+    newline = ""
+    results = []
+    for i, per in enumerate(percents):
+        newline += f"{i+1+per},"
+        results.append(round(money * per, 2)) # percents ya está ordenado
+    #Para esos centimillos que no se aproximan bien
+    if sum(results) > money:
+        results[-1] -= (sum(results) - money)
+    elif sum(results) < money:
+        results[0] += (money - sum(results))
+    subj = input("Introduce el asunto del movimiento: ")
+    newline = newline[:-1] + " {0:+.2f} {1} # ".format(money, subj)
+    for i, res in enumerate(results):
+        newline += f"{percents[i]*100}% = {results[i]}, "
+        accs[i] += res
+    newline = newline[:-2]
+    weekind = lines.index(f"Semana {week}")
+    dotind = lines[weekind:].index(".")
+    lines.insert(dotind, newline)
+    lines = updateAccounts(accs, lines)
+    return lines
+
+def withdrawFromAccount(accs, lines, week):
+    try:
+        accind = int(input("¿De qué cuenta quieres retirar saldo? (Indica con un número) "))
+        while accind > len(accs):
+            accind = int(input("Cuenta no válida. Sólo hay {len(accs)} cuentas. ¿A qué cuenta quieres añadir saldo? "))
+        money = round(float(input("¿Cuánto saldo quieres retirar? (Indica el número de euros sin ningún carácter especial, usando un punto para céntimos como decimales) ")), 2)
+    except Exception as e:
+        print("No es un número. Abortando operación...")
+        return None
+    subj = input("Introduce el asunto del movimiento: ")
+    weekind = lines.index("Semana {week}")
+    dotind = lines[weekind:].index(".")
+    lines.insert(dotind, "{0} {1:+.2f} {2}".format(accind, -money, subj))
+    accs[accind-1] -= money
+    lines = updateAccounts(accs, lines)
+    return lines
+
+def withdrawFromAccounts(accs, lines, week):
+    try:
+        accind = input("¿A qué cuentas quieres añadir saldo? (Indica con números separados por un espacio) ").strip().split(" ")
+        accind = [int(i) for i in accind]
+        accsnum = len(accs)
+        while len(accind) > accsnum or any(i > accsnum for i in accind):
+            accind = input("Demasiadas cuentas indicadas o cuenta no válida indicada. Sólo hay {len(accs)} cuentas. ¿A qué cuentas quieres añadir saldo? ").strip().split(" ")
+            accind = [int(i) for i in accind]
+        money = float(input("¿Cuánto saldo quieres añadir? (Indica el número de euros sin ningún carácter especial, usando un punto para céntimos como decimales) "))
+        total = 1
+        while total == 1:
+            percents = []
+            for i in accind[:-1]:
+                per = input("¿Qué porcentaje del ingreso irá a la cuenta número {i}? (Indicar con un número entre 0 y 1, escribe decimales detrás del punto) 0.")
+                per = round(float("."+per), 4)
+                total -= per
+                percents.append(per) # Entrada posiblemente no ordenada por número de cuenta
+            total = round(total, 4)
+            percents.append(total)
+            print(f"Para la cuenta {accind[-1]} irá el {round(total*100, 2)}% ({total} restante).", end=" ")
+            if total < 0:
+                total = 1
+                print()
+            else:
+                res = input("¿Porcentajes aceptables? (s/n) ")
+                if res != 's':
+                    return lines
+                aux = [4.4] * len(percents) # Ordenación de percents
+                for i, per in enumerate(percents):
+                    aux.insert(accind[i]-1, per)
+                    aux.remove(4.4)
+                percents = aux
+    except:
+        print("No es un número. Abortando operación...")
+        return None
+    newline = ""
+    results = []
+    for i, per in enumerate(percents):
+        newline += f"{i+1+per},"
+        results.append(round(money * per, 2)) # percents ya está ordenado
+    #Para esos centimillos que no se aproximan bien
+    if sum(results) > money:
+        results[-1] -= (sum(results) - money)
+    elif sum(results) < money:
+        results[0] += (money - sum(results))
+    subj = input("Introduce el asunto del movimiento: ")
+    newline = newline[:-1] + " {0:+.2f} {1} # ".format(-money, subj)
+    for i, res in enumerate(results):
+        newline += f"{percents[i]*100}% = {-res}, "
+        accs[i] -= res 
+    newline = newline[:-2]
+    weekind = lines.index(f"Semana {week}")
+    dotind = lines[weekind:].index(".")
+    lines.insert(dotind, newline)
+    lines = updateAccounts(accs, lines)
+    return lines
+
+def transferToAccount(accs, lines, week):
+    try:
+        ori = int(input("Indica el número de la cuenta de la que sacar saldo: "))
+        des = int(input("Indica el número de la cuenta a la que meter saldo: "))
+        while ori > len(accs) or des > len(accs):
+            ori = int(input("Cuenta no válida. Sólo hay {len(accs)} cuentas. ¿De qué cuenta quieres sacar saldo? "))
+            des = int(input("Indica el número de la cuenta a la que meter saldo: "))
+        money = round(float(input("¿Cuánto saldo quieres transferir? (Indica el número de euros sin ningún carácter especial, usando un punto para céntimos como decimales) ")), 2)
+    except Exception as e:
+        print("No es un número. Abortando operación...")
+        return None
+    subj = input("Introduce el asunto del movimiento: ")
+    weekind = lines.index("Semana {week}")
+    dotind = lines[weekind:].index(".")
+    lines.insert(dotind, "{0}->{1} {2:.2f} {3}".format(ori, des, money, subj))
+    accs[ori-1] -= money
+    accs[des-1] += money
+    lines = updateAccounts(accs, lines)
+    return lines
+
+def showWeek(lines, week):
+    try:
+        check = int(input("¿Qué semana quieres consultar? (Indica con un número del 1 al 4) "))
+        while check < 1 and check > week:
+            if check > week:
+                check = int(input("Por mucho que quieras, todavía no podemos ver el futuro. ¿Qué semana quieres consultar? (Indica con un número del 1 al 4) "))
+            else:
+                check = int(input("Entrada no válida. ¿Qué semana quieres consultar? (Indica con un número del 1 al 4) "))
+    except:
+        print("No es un número. Abortando operación...")
+        return None
+    weekind = lines.index("Semana {week}")
+    dotind = lines[weekind:].index(".")
+    for line in lines[weekind:dotind]:
+        print(line)
+    return lines
+
+def showMonth(rfol, currentfile):
+    regex = input("¿Qué mes quieres consultar? (Indica nombre del mes o expresión regular) ")
+    year = input("¿De qué año? ")
+    user = currentfile[:currentfile.index(meses[int(datetime.now().strftime("%m"))-1])] # Sacar usuario del nombre del fichero actual
+    files = os.listdir(rfol)
+    # Sólo ficheros de texto que sean de este usuario, del año indicado, y cumplan con el formato
+    files = [file for file in files if re.search(f"^{user}", file) and file[-8:] == f"{year}.txt"]
+    files = [file for file in files if re.search(regex, file[len(user):-8])]
+    if not files:
+        print(f"No se han encontrado ficheros con los criterios especificados para el usuario {user}.")
+    else:
+        for file in files:
+            print(f"Contenidos de {file}")
+            with open(file, "r") as f:
+                cont = f.read()
+            print(cont)
+
+def userCommandInterface(rfol, currentfile, week, history):
     file = os.path.join(rfol, currentfile)
     with open(file, 'r') as f:
         lines = f.readlines()
@@ -75,11 +299,38 @@ def userCommandInterface(rfol, currentfile, history):
         initAccountFile(rfol, currentfile, accounts)
     else:
         accounts = parseAccounts(lines[-1]) # La última línea siempre serán las cuentas actualizadas
+    checkWeeksInFile(file, lines, week)
     res = True
-    while res != '8':
+    while lines and res != '9':
         printAccounts(accounts)
         printOptions()
         res = input()
+        if res == '1':
+            lines = addToAccount(accounts, lines, week)
+        elif res == '2':
+            lines = addToAccounts(accounts, lines, week)
+        elif res == '3':
+            lines = withdrawFromAccount(accounts, lines, week)
+        elif res == '4':
+            lines = withdrawFromAccounts(accounts, lines, week)
+        elif res == '5':
+            lines = transferToAccount(accounts, lines, week)
+        elif res == '6':
+            lines = showWeek(lines, week)
+        elif res == '7':
+            lines = showMonth(rfol, currentfile)
+        elif res == '8':
+            print(f"La suma de todas las cuentas es {sum(accounts)}€")
+        elif res == '0':
+            print("¡Todavía por implementar!")
+        else:
+            res = '9'
+        if res != '9' and res != '0' and lines:
+            with open(file, 'w') as f:
+                f.writelines(lines)
+        elif not lines:
+            return 2
+    return 0
     
     
 def initAccountFile(rfol, name, accounts):
@@ -124,7 +375,7 @@ def main(args):
         print(f"Encontrado fichero/s de cuenta para usuario {user}.")
     if currentdatestr not in files:
         print(f"Creado nuevo fichero de cuenta {currentdatestr}.")
-    rescode = userCommandInterface(rfol, currentdatestr, files) # Mejora: hacer una interfaz gráfica
+    rescode = userCommandInterface(rfol, currentdatestr, week, files) # Mejora: hacer una interfaz gráfica
     exit(rescode)
 
 if __name__ == '__main__':
