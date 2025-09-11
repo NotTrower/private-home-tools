@@ -262,7 +262,7 @@ def showWeek(lines, week):
     except:
         print("No es un número. Abortando operación...")
         return None
-    weekind = lines.index(f"Semana {week}\n")
+    weekind = lines.index(f"Semana {check}\n")
     dotind = lines[weekind:].index(".\n") + weekind
     aux = lines[weekind:dotind]
     if aux:

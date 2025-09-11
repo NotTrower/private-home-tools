@@ -1,6 +1,8 @@
 #Ficheros de prueba
 Test*
 test*
+prueba*
+Prueba*
 
 #Output de PyInstaller
 build
