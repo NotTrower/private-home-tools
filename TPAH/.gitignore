@@ -1,3 +1,8 @@
 #Ficheros de prueba
 Test*
 test*
+
+#Output de PyInstaller
+build
+dist
+*.spec
