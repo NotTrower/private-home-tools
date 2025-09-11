@@ -1,6 +1,7 @@
 # Trower's Personal Accounting Handler
 # Sólo funciona con años que tengan 4 dígitos...
 import os, re, argparse
+from sys import exit
 from time import sleep
 from datetime import datetime
 
@@ -49,8 +50,11 @@ def parseAccounts(line):
     words = line.strip().split(' ')
     accs = []
     while words:
-        cha = words.pop(0)
-        accs.insert(int(cha[0])-1, float(words.pop(0)[:-1]))
+        acc = int(words.pop(0)[0])-1
+        money = words.pop(0)
+        # Dará error si alguna de las cuentas no tiene un número representando la cantidad de dinero disponible
+        money = float(re.search(r"\d+(\.\d{,2})?", money).group())
+        accs.insert(acc, money)
     return accs
 
 def printAccounts(accs):
@@ -85,7 +89,7 @@ def checkWeeksInFile(file, lines, week):
             lines.insert((weekcount - 1)*3 + 1, f"Semana {weekcount}\n")
             lines.insert((weekcount - 1)*3 + 2, ".\n")
             lines.insert((weekcount)*3, lines[0])
-            with open(file, 'w') as f:
+            with open(file, 'w', encoding='utf-8') as f:
                 f.writelines(lines)
         weekcount += 1
 
@@ -241,7 +245,7 @@ def transferToAccount(accs, lines, week):
     subj = input("Introduce el asunto del movimiento: ")
     weekind = lines.index(f"Semana {week}\n")
     dotind = lines[weekind:].index(".\n") + weekind
-    lines.insert(dotind, "{0}->{1} {2:.2f} {3}".format(ori, des, money, subj))
+    lines.insert(dotind, "{0}->{1} {2:.2f} {3}\n".format(ori, des, money, subj))
     accs[ori-1] -= money
     accs[des-1] += money
     lines = updateAccounts(accs, lines)
@@ -260,10 +264,10 @@ def showWeek(lines, week):
         return None
     weekind = lines.index(f"Semana {week}\n")
     dotind = lines[weekind:].index(".\n") + weekind
-    aux = lines[weekind:dotind-1]
+    aux = lines[weekind:dotind]
     if aux:
         for line in aux:
-            print(line)
+            print(line, end="")
     else:
         print("No hay transacciones en esa semana.")
     return lines
@@ -281,17 +285,17 @@ def showMonth(rfol, currentfile, lines):
     else:
         for file in files:
             print(f"Contenidos de {file}")
-            with open(file, "r") as f:
+            with open(file, "r", encoding='utf-8') as f:
                 cont = f.read()
             print(cont)
     return lines
 
 def userCommandInterface(rfol, currentfile, week, history):
     file = os.path.join(rfol, currentfile)
-    with open(file, 'r') as f:
+    with open(file, 'r', encoding='utf-8') as f:
         lines = f.readlines()
     if not lines:
-        with open(os.path.join(rfol, history[-1]), 'r') as prevf:
+        with open(os.path.join(rfol, history[-1]), 'r', encoding='utf-8') as prevf:
             accounts = parseAccounts(prevf.readlines()[-1])
         initAccountFile(rfol, currentfile, accounts)
     else:
@@ -323,7 +327,7 @@ def userCommandInterface(rfol, currentfile, week, history):
         else:
             res = '9'
         if res != '9' and res != '0' and lines:
-            with open(file, 'w') as f:
+            with open(file, 'w', encoding='utf-8') as f:
                 f.writelines(lines)
         elif not lines:
             return 2
@@ -331,7 +335,7 @@ def userCommandInterface(rfol, currentfile, week, history):
     
     
 def initAccountFile(rfol, name, accs):
-    with open(os.path.join(rfol, name), 'w') as f:
+    with open(os.path.join(rfol, name), 'w', encoding='utf-8') as f:
         for i, money in enumerate(accs):
             f.write("{0}: {1:.2f}€ ".format(i+1, money))
         f.write("\n")
@@ -373,7 +377,10 @@ def main(args):
         print(f"Encontrado fichero/s de cuenta para usuario {user}.")
     if currentdatestr not in files:
         print(f"Creado nuevo fichero de cuenta {currentdatestr}.")
-    rescode = userCommandInterface(rfol, currentdatestr, week, files) # Mejora: hacer una interfaz gráfica
+    try:
+        rescode = userCommandInterface(rfol, currentdatestr, week, files) # Mejora: hacer una interfaz gráfica
+    except:
+        sleep(4)
     exit(rescode)
 
 if __name__ == '__main__':
