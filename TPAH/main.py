@@ -53,14 +53,15 @@ def parseAccounts(line):
         acc = int(words.pop(0)[0])-1
         money = words.pop(0)
         # Dará error si alguna de las cuentas no tiene un número representando la cantidad de dinero disponible
-        money = float(re.search(r"\d+(\.\d{,2})?", money).group())
+        money = float(re.search(r"\d+(\.\d{,2})?", money).group()) # type: ignore
         accs.insert(acc, money)
     return accs
 
-def printAccounts(accs):
+def printCurrentAccounts(accs):
     for i, acc in enumerate(accs):
         print("{0}: {1:.2f}€".format(i+1, acc), end=" ")
-    print()
+    week, month = getDateString()
+    print(f"- {month}, Semana {week}")
 
 def updateAccounts(accs, lines):
     newline = ""
@@ -84,11 +85,13 @@ def printOptions():
 
 def checkWeeksInFile(file, lines, week):
     weekcount = 1
-    while weekcount <= week:
-        if f"Semana {weekcount}\n" not in lines: #Semanas sin movimientos
-            lines.insert((weekcount - 1)*3 + 1, f"Semana {weekcount}\n")
-            lines.insert((weekcount - 1)*3 + 2, ".\n")
-            lines.insert((weekcount)*3, lines[0])
+    #lastline = len(lines) - 1
+    accline = lines[-1] #Las cuentas actualizadas siempre son la última línea
+    while weekcount <= week: #Semanas sin movimientos
+        if f"Semana {weekcount}\n" not in lines:
+            lines.append(f"Semana {weekcount}\n")
+            lines.append(".\n")
+            lines.append(accline)
             with open(file, 'w', encoding='utf-8') as f:
                 f.writelines(lines)
         weekcount += 1
@@ -303,7 +306,7 @@ def userCommandInterface(rfol, currentfile, week, history):
     checkWeeksInFile(file, lines, week)
     res = True
     while lines and res != '9':
-        printAccounts(accounts)
+        printCurrentAccounts(accounts)
         printOptions()
         res = input()
         if res == '1':
@@ -379,8 +382,11 @@ def main(args):
         print(f"Creado nuevo fichero de cuenta {currentdatestr}.")
     try:
         rescode = userCommandInterface(rfol, currentdatestr, week, files) # Mejora: hacer una interfaz gráfica
-    except:
+    except Exception as e:
+        print("Ha ocurrido un error. Contacte con el desarrollador del código en: https://github.com/NotTrower")
+        print(e)
         sleep(4)
+        rescode = 1
     exit(rescode)
 
 if __name__ == '__main__':
