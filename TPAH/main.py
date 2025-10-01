@@ -295,14 +295,13 @@ def showMonth(rfol, currentfile, lines):
 
 def userCommandInterface(rfol, currentfile, week, history):
     file = os.path.join(rfol, currentfile)
-    with open(file, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
-    if not lines:
+    if not os.path.isfile(file):
         with open(os.path.join(rfol, history[-1]), 'r', encoding='utf-8') as prevf:
             accounts = parseAccounts(prevf.readlines()[-1])
         initAccountFile(rfol, currentfile, accounts)
-    else:
-        accounts = parseAccounts(lines[-1]) # La última línea siempre serán las cuentas actualizadas
+    with open(file, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+    accounts = parseAccounts(lines[-1]) # La última línea siempre serán las cuentas actualizadas
     checkWeeksInFile(file, lines, week)
     res = True
     while lines and res != '9':
