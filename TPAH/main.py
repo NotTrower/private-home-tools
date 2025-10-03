@@ -44,7 +44,6 @@ def getFileHistory(user, rfol) -> list:
         files.remove(last)
         his.append(last)
         last = getLastFileName(user, files)
-    print(his)
     return his
 
 def parseAccounts(line):
