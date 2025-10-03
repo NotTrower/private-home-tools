@@ -26,7 +26,7 @@ def getLastFileName(user, files):
                 if month in meses:
                     year = year.group()[:-4]
                     if last:
-                        if int(year) < int(last[-4:]) or meses.index(month) < meses.index(last[:-4]):
+                        if int(year) < int(last[-4:]) or (int(year) == int(last[-4:]) and meses.index(month) < meses.index(last[:-4])):
                             last = month + year
                     else:
                         last = month + year
@@ -42,8 +42,9 @@ def getFileHistory(user, rfol) -> list:
     last = getLastFileName(user, files) #Ordenar según Mes y Año el listado de ficheros y filtrar si su nombre no cumple con el formato
     while last:
         files.remove(last)
-        his.insert(0, last)
+        his.append(last)
         last = getLastFileName(user, files)
+    print(his)
     return his
 
 def parseAccounts(line):
