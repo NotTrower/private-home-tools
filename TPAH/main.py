@@ -67,7 +67,7 @@ def updateAccounts(accs, lines):
     newline = ""
     for i, acc in enumerate(accs):
         newline += "{0}: {1:.2f}€ ".format(i+1, acc)
-    lines[-1] = newline
+    lines[-1] = newline + "\n"
     return lines
 
 def printOptions():
@@ -91,7 +91,7 @@ def checkWeeksInFile(file, lines, week):
         if f"Semana {weekcount}\n" not in lines:
             lines.append(f"Semana {weekcount}\n")
             lines.append(".\n")
-            lines.append(accline)
+            lines.append(accline) #El último caracter de accline no es un salto de línea
             with open(file, 'w', encoding='utf-8') as f:
                 f.writelines(lines)
         weekcount += 1
@@ -339,8 +339,8 @@ def userCommandInterface(rfol, currentfile, week, history):
 def initAccountFile(rfol, name, accs):
     with open(os.path.join(rfol, name), 'w', encoding='utf-8') as f:
         for i, money in enumerate(accs):
-            f.write("{0}: {1:.2f}€ ".format(i+1, money))
-        f.write("\n")
+            f.write("{0}: {1:.2f}€ ".format(i+1, money)) #Deja un espacio al final
+        f.write('\n')
 
 def argInit():
     parser = argparse.ArgumentParser(description="Script para facilitar el uso de cuentas bancarias lógicas o virtuales.")
