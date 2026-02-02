@@ -53,7 +53,7 @@ def parseAccounts(line):
         acc = int(words.pop(0)[0])-1
         money = words.pop(0)
         # Dará error si alguna de las cuentas no tiene un número representando la cantidad de dinero disponible
-        money = float(re.search(r"\d+(\.\d{,2})?", money).group()) # type: ignore
+        money = float(re.search(r"-*\d+(\.\d{,2})?", money).group()) # type: ignore
         accs.insert(acc, money)
     return accs
 
