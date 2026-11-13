@@ -323,7 +323,14 @@ def userCommandInterface(rfol, currentfile, week, history):
         elif res == '7':
             lines = showMonth(rfol, currentfile, lines) #Mejorar para que aproveche la variable "history"
         elif res == '8':
-            print(f"La suma de todas las cuentas es {sum(accounts)}€")
+            debt = 0
+            for acc in accounts:
+                if acc < 0:
+                    debt += acc
+            if debt == 0:
+                print(f"La suma de todas las cuentas es {round(sum(accounts), 2)}€")
+            else:
+                print(f"La suma de todas las cuentas es {round(sum(accounts), 2)}€ (sin ninguna deuda, {round(sum(accounts) - debt, 2)}€)")
         elif res == '0':
             print("¡Todavía por implementar!")
         else:
