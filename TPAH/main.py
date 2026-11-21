@@ -636,7 +636,7 @@ def helpCommandInterface():
 
 # Hay que pasar "lines" porque se van a utilizar a medida que se configuran las cuentas
 def configCommandInterface(rfol, user, week, accs, lines):
-    with open(os.path.join(rfol, user) + '.tpah', 'r') as f:
+    with open(os.path.join(rfol, user) + '.tpah', 'r', encoding='utf-8') as f:
         conf = json.load(f)
     prevconf = conf.copy()
     prevlines = lines[:]
