@@ -625,7 +625,7 @@ def updateConfigFile(rfol, user, conf, accs, verbose=False):
     conffile = os.path.join(rfol, user) + '.tpah'
     for i, acc in enumerate(accs): conf["accounts"][i]["Saldo"] = accs[i]
     with open(conffile, 'w', encoding='utf-8') as f:
-        json.dump(conf, f)
+        json.dump(conf, f, indent=4, ensure_ascii=False)
     if verbose: print(f"Configuración actualizada.")
     return conf
 
@@ -691,7 +691,7 @@ def initConfigFile(rfol, name, accs):
     conf = { "accounts": [] }
     for i, acc in enumerate(accs): conf["accounts"].append(createAccount(conf, accs, 0, lines=None))
     with open(conffile, 'w', encoding='utf-8') as f:
-        json.dump(conf, f)
+        json.dump(conf, f, indent=4, ensure_ascii=False)
     print(f"Usuario {name} configurado con éxito.")
     return
 
